@@ -1,0 +1,80 @@
+## 物产中大访客系统
+## by miaohf @20220426
+version: '2.0'
+services:
+  db:
+    image: mysql:latest
+    container_name: mysql
+    #command: mysqld --default-authentication-plugin=mysql_native_password
+    #ports:
+    #  - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=euH9oI6gmXE		# Requested, set the root's password of MySQL service.
+      - MYSQL_LOG_CONSOLE=true
+    volumes:
+      - /docker/mysql/my.cnf:/etc/mysql/my.cnf
+      - /docker/mysql/db:/var/lib/mysql	# Requested, specifies the path to MySQL data persistent store.
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - backend
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    #ports:
+    #  - 6379:6379
+    volumes:
+      - /docker/redis/redis.conf:/etc/redis/redis.conf
+      - /docker/redis/data:/data
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    networks:
+      - backend
+
+  web:
+    image: adoptopenjdk/openjdk8
+    container_name: wczd
+    #ports:
+    #  - 8520:8520
+    volumes:
+      - /docker/wczd/deploy:/wczd/deploy
+      - /docker/nginx/html/logs/wczd:/wczd/logs
+      - /docker/wczd/start_wczd.sh:/wczd/start_wczd.sh
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - db 
+      - redis
+    entrypoint:
+      #- java
+      #- -jar
+      #- /wczd/deploy/wczd.jar
+      - sh
+      - /wczd/start_wczd.sh
+    restart: always
+    networks:
+      - frontend
+      - backend
+
+  proxy:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /docker/nginx/html:/var/www/html
+      - /docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /docker/nginx/conf.d:/etc/nginx/conf.d
+      - /docker/nginx/logs:/var/log/nginx
+      #- /docker/nginx/certs:/etc/nginx/certs
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    networks:
+      - frontend
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
